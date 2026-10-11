@@ -1,0 +1,1 @@
+{"headers":{"Authorization":"Bearer test-token"},"channel":"instant","source":"ci-test","base_url":"http://config-fallback.invalid","timeout":5}
