@@ -63,6 +63,8 @@ notify-me setup
 
 可选字段：`base_url`（默认 `https://rosmontis.cc`）、`device_id`、`device_name`、`user_agent`、`timeout`（秒，默认 10）。
 
+`channel` 不做合法性校验：已知通道 `instant` / `bark` / `qq`，其中 `instant` 和 `qq` 的请求会携带 `source` 字段；其他任意值会原样传给服务端，方便以后扩展新通道。
+
 ### 环境变量
 
 | 变量 | 作用 |
@@ -90,6 +92,7 @@ notify-me setup config.sealed               # 输入口令，写出 config.json 
 notify-me "构建完成"                        # send 是默认子命令
 notify-me send -t "标题" "内容"
 echo "长文本" | notify-me                   # 从 stdin 读入
+notify-me send -c qq "推到 QQ 通道"          # 通道不做校验，任意值都能传
 notify-me send -c bark "推到 bark 通道"
 notify-me --version
 ```

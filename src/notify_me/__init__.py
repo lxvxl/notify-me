@@ -15,11 +15,13 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 
 AAD = b"notify-me sealed configuration v1"
 DEFAULT_URL = "https://rosmontis.cc"
 COMMAND_NAME = "notify-me"
+# Channels whose payload carries a "source" field; unknown channels pass through as-is.
+CHANNELS_WITH_SOURCE = {"instant", "qq"}
 
 
 class NotificationError(RuntimeError):
@@ -130,12 +132,8 @@ def build_config_interactively() -> dict[str, object]:
         headers[name] = value
     if not headers:
         raise NotificationError("At least one header is required (the service needs authentication).")
-    print()
-    while True:
-        channel = ask("Default channel (instant/bark)", "instant").lower()
-        if channel in {"instant", "bark"}:
-            break
-        print("  Please choose 'instant' or 'bark'.")
+    print("\nKnown channels: instant, bark, qq. Any other value is passed through to the service.")
+    channel = ask("Default channel", "instant")
     while True:
         source = ask("Default source", "notify-me")
         if source.strip() or channel != "instant":
@@ -155,8 +153,8 @@ def send(text: str, title: str, channel: str | None, source: str | None, timeout
         raise NotificationError("Config must contain a non-empty 'headers' object.")
     target_channel = channel or string(raw, "channel", "instant")
     target_source = source if source is not None else string(raw, "source", "notify-me")
-    if target_channel == "instant" and not target_source.strip():
-        raise NotificationError("source is required for instant notifications.")
+    if target_channel in CHANNELS_WITH_SOURCE and not target_source.strip():
+        raise NotificationError(f"source is required for '{target_channel}' notifications.")
     try:
         request_timeout = timeout if timeout is not None else float(raw.get("timeout", 10))
     except (TypeError, ValueError) as exc:
@@ -164,7 +162,7 @@ def send(text: str, title: str, channel: str | None, source: str | None, timeout
     payload: dict[str, str] = {"channel": target_channel, "text": text}
     if title:
         payload["title"] = title
-    if target_channel == "instant":
+    if target_channel in CHANNELS_WITH_SOURCE:
         payload["source"] = target_source.strip()
     request_headers = {"Content-Type": "application/json", "Accept": "application/json",
                        "User-Agent": string(raw, "user_agent", f"{COMMAND_NAME}/{__version__}"),
@@ -197,7 +195,7 @@ def main() -> int:
     send_parser.add_argument("text", nargs="?")
     send_parser.add_argument("-t", "--title", default="")
     send_parser.add_argument("-s", "--source")
-    send_parser.add_argument("-c", "--channel", choices=["instant", "bark"])
+    send_parser.add_argument("-c", "--channel", help="instant, bark, qq, or any channel your service supports")
     send_parser.add_argument("--timeout", type=float)
     send_parser.add_argument("--json", action="store_true")
     seal_parser = sub.add_parser("seal")
